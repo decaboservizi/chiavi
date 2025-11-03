@@ -1,0 +1,84 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Ricerca Codici Chiavi</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:20px;background:#f7f9fc;color:#111}
+h1{font-size:20px;margin-bottom:12px}
+.card{background:white;padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(20,30,60,0.06);margin-bottom:12px}
+input,button{font:inherit;padding:8px;border-radius:6px;border:1px solid #d8e0ea}
+button{cursor:pointer;background:#007bff;color:white;border:none}
+button:hover{background:#005fc1}
+.chip{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #ddd;margin:4px;background:#fbfdff}
+.muted{color:#556}
+#results{margin-top:10px}
+</style>
+</head><body>
+<h1>Ricerca Codici Chiavi</h1>
+<div class="card">
+<input id="query" placeholder="Digita parte della via (es. Abamonti)" style="min-width: 250px;">
+<button id="search">Cerca</button>
+<button id="clear">Pulisci</button>
+<div id="results"></div>
+</div>
+<script>
+let data = [];
+// Carica automaticamente dati.xlsx
+async function loadExcel() {
+try {
+const response = await fetch('dati.xlsx');
+if (!response.ok) throw new Error('File non trovato o errore nel caricamento');
+const arrayBuffer = await response.arrayBuffer();
+const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+const json = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+data = json;
+console.log("File dati.xlsx caricato, righe:", data.length);
+} catch (err) {
+document.getElementById('results').innerHTML = "<p style='color:red'>Errore nel caricamento di dati.xlsx: " + err.message + "</p>";
+}
+}
+// Esegui al caricamento della pagina
+loadExcel();
+// Ricerca
+document.getElementById('search').addEventListener('click', ()=>{
+const q = document.getElementById('query').value.trim().toLowerCase();
+if(!q){ alert("Inserisci una via da cercare."); return; }
+if(!data.length){ alert("Dati non ancora caricati."); return; }
+const resultsDiv = document.getElementById('results');
+resultsDiv.innerHTML = "";
+// trova le colonne
+const viaKey = Object.keys(data[0]).find(k => k.toLowerCase() === "via");
+const codKey = Object.keys(data[0]).find(k => k.toLowerCase() === "codice");
+if(!viaKey || !codKey){
+resultsDiv.innerHTML = "<p style='color:red'>Errore: nel file non ci sono colonne 'Via' e 'Codice'.</p>";
+return;
+}
+const results = data.filter(r => String(r[viaKey]).toLowerCase().includes(q));
+if(results.length === 0){
+resultsDiv.innerHTML = "<p class='muted'>Nessun risultato trovato.</p>";
+return;
+}
+const list = document.createElement('div');
+for(const row of results){
+const via = row[viaKey];
+const cod = row[codKey];
+const item = document.createElement('div');
+item.innerHTML = "<strong>" + via + "</strong><br>";
+const span = document.createElement('span');
+span.className = "chip";
+span.textContent = cod;
+item.appendChild(span);
+list.appendChild(item);
+}
+resultsDiv.appendChild(list);
+});
+// Pulisci
+document.getElementById('clear').addEventListener('click', ()=>{
+document.getElementById('query').value = "";
+document.getElementById('results').innerHTML = "";
+});
+</script>
+</body></html>
