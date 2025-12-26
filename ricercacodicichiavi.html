@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ricerca Clienti</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  margin:20px;
+  background:#f7f9fc;
+}
+h1{font-size:20px}
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+input,button{
+  font:inherit;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+button{
+  background:#007bff;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+button:hover{background:#005fc1}
+.result{
+  margin-top:10px;
+  padding:10px;
+  border-bottom:1px solid #eee;
+}
+.muted{color:#666}
+</style>
+</head>
+
+<body>
+
+<h1>Ricerca Clienti</h1>
+
+<div class="card">
+  <input id="query" placeholder="Cerca per ragione sociale o indirizzo" style="min-width:300px">
+  <button id="search">Cerca</button>
+  <button id="clear">Pulisci</button>
+  <div id="results"></div>
+</div>
+
+<script>
+let data = [];
+
+// Caricamento Excel
+async function loadExcel(){
+  try{
+    const res = await fetch("dati.xlsx");
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf,{type:"array"});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    data = XLSX.utils.sheet_to_json(sheet,{defval:""});
+  }catch(e){
+    document.getElementById("results").innerHTML =
+      "<p style='color:red'>Errore nel caricamento di dati.xlsx</p>";
+  }
+}
+loadExcel();
+
+// Ricerca
+document.getElementById("search").onclick = () => {
+  const q = document.getElementById("query").value.trim().toLowerCase();
+  const resDiv = document.getElementById("results");
+  resDiv.innerHTML = "";
+
+  if(!q){ alert("Inserisci un testo da cercare"); return; }
+  if(!data.length){ alert("Dati non caricati"); return; }
+
+  const results = data.filter(r =>
+    String(r["Ragione Sociale Anagrafica"]).toLowerCase().includes(q) ||
+    String(r["Indirizzo"]).toLowerCase().includes(q)
+  );
+
+  if(!results.length){
+    resDiv.innerHTML = "<p class='muted'>Nessun risultato trovato</p>";
+    return;
+  }
+
+  results.forEach(r=>{
+    const div = document.createElement("div");
+    div.className = "result";
+    div.innerHTML = `
+      <strong>${r["Ragione Sociale Anagrafica"]}</strong><br>
+      Codice: <b>${r["Codice"]}</b><br>
+      Sacchetti: <b>${r["Sacchetti"]}</b>
+    `;
+    resDiv.appendChild(div);
+  });
+};
+
+// Pulisci
+document.getElementById("clear").onclick = ()=>{
+  document.getElementById("query").value="";
+  document.getElementById("results").innerHTML="";
+};
+</script>
+
+</body>
+</html>
