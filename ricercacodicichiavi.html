@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ricerca Clienti</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  margin:20px;
+  background:#f7f9fc;
+}
+h1{font-size:20px}
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+input,button{
+  font:inherit;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+button{
+  background:#007bff;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+button:hover{background:#005fc1}
+.result{
+  margin-top:10px;
+  padding:10px;
+  border-bottom:1px solid #eee;
+}
+.muted{color:#666}
+</style>
+</head>
+
+<body>
+
+<h1>Ricerca Clienti</h1>
+
+<div class="card">
+  <input id="query" placeholder="Scrivi ragione sociale o indirizzo" style="min-width:280px">
+  <button id="search">Cerca</button>
+  <button id="clear">Pulisci</button>
+  <div id="results"></div>
+</div>
+
+<script>
+let data = [];
+
+// carica Excel
+async function loadExcel(){
+  try{
+    const res = await fetch("dati.xlsx");
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf,{type:"array"});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    data = XLSX.utils.sheet_to_json(sheet,{defval:""});
+  }catch(e){
+    document.getElementById("results").innerHTML =
+      "<p style='color:red'>Errore nel caricamento di dati.xlsx</p>";
+  }
+}
+loadExcel();
+
+// ricerca
+document.getElementById("search").onclick = () => {
+  const q = document.getElementById("query").value.trim().toLowerCase();
+  const resDiv = document.getElementById("results");
+  resDiv.innerHTML = "";
+
+  if(!q){ alert("Inserisci un testo da cercare"); return; }
+  if(!data.length){ alert("Dati non caricati"); return; }
+
+  // individua le colonne
+  const keys = Object.keys(data[0]);
+  const kCod = keys.find(k=>k.toLowerCase()=="codice");
+  const kRag = keys.find(k=>k.toLowerCase()=="ragione sociale anagrafica");
+  const kInd = keys.find(k=>k.toLowerCase()=="indirizzo");
+  const kSac = keys.find(k=>k.toLowerCase()=="sacchetti");
+
+  if(!kCod || !kRag || !kInd || !kSac){
+    resDiv.innerHTML = "<p style='color:red'>Colonne mancanti nel file Excel</p>";
+    return;
+  }
+
+  const results = data.filter(r =>
+    String(r[kRag]).toLowerCase().includes(q) ||
+    String(r[kInd]).toLowerCase().includes(q)
+  );
+
+  if(!results.length){
+    resDiv.innerHTML = "<p class='muted'>Nessun risultato trovato</p>";
+    return;
+  }
+
+  results.forEach(r=>{
+    const d = document.createElement("div");
+    d.className = "result";
+    d.innerHTML = `
+      <strong>${r[kRag]}</strong><br>
+      Codice: <b>${r[kCod]}</b><br>
+      Sacchetti: <b>${r[kSac]}</b>
+    `;
+    resDiv.appendChild(d);
+  });
+};
+
+// pulisci
+document.getElementById("clear").onclick = ()=>{
+  document.getElementById("query").value="";
+  document.getElementById("results").innerHTML="";
+};
+</script>
+
+</body>
+</html>
